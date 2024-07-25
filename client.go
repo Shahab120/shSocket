@@ -11,6 +11,10 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
+const (
+	maxUDPPacketSize = 1400 // Set to a reasonable size less than the typical MTU of 1500
+)
+
 func clientmain() {
 
 	device := `\Device\NPF_{6AFEB50E-9221-43EE-AE89-D6E15CC889EC}`
@@ -69,16 +73,28 @@ func clientmain() {
 		// Serialize the packet
 		packetData := packet.Data()
 		encryptedData, err := EncryptECB(packetData)
-		fmt.Println(packet)
-		fmt.Println(string(packet.Data()))
 		if err != nil {
 			log.Println("Error sending packet:", err)
 			continue
 		}
-		// Send the serialized packet to the server
-		_, err = conn.Write(encryptedData)
-		if err != nil {
-			log.Println("Error sending packet:", err)
+		fmt.Println(packet)
+		fmt.Println(string(packet.Data()))
+		fmt.Println(len(encryptedData))
+
+		// Split packet data if it exceeds the maximum UDP packet size
+		for len(encryptedData) > 0 {
+			chunkSize := maxUDPPacketSize
+			if len(packetData) < chunkSize {
+				chunkSize = len(packetData)
+			}
+			chunk := packetData[:chunkSize]
+			packetData = packetData[chunkSize:]
+
+			// Send the chunk to the server
+			_, err := conn.Write(chunk)
+			if err != nil {
+				log.Println("Error sending packet:", err)
+			}
 		}
 	}
 
