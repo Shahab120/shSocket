@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
@@ -78,7 +79,7 @@ func clientmain() {
 }
 
 func clientmessage() {
-	serverAddr, err := net.ResolveUDPAddr("udp", "localhost:8182")
+	serverAddr, err := net.ResolveUDPAddr("udp", "192.168.1.8:8182")
 	if err != nil {
 		fmt.Println("Error resolving server address:", err)
 		return
@@ -96,10 +97,13 @@ func clientmessage() {
 	message := "Hello, UDP mserver!"
 
 	// Write the message to the server
-	_, err = conn.Write([]byte(message))
-	if err != nil {
-		fmt.Println("Error writing to UDP connection:", err)
-		return
+	for {
+		_, err = conn.Write([]byte(message))
+		if err != nil {
+			fmt.Println("Error writing to UDP connection:", err)
+			return
+		}
+		time.Sleep(5 * time.Second)
 	}
 
 }

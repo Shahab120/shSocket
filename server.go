@@ -35,6 +35,7 @@ func servermain() {
 
 		// Parse the packet
 		packet := gopacket.NewPacket(buf[:n], layers.LayerTypeEthernet, gopacket.Default)
-		fmt.Printf("Received packet from %s: %v\n", clientAddr, packet)
+		fmt.Printf("Received packet from %s: %v\n", clientAddr, packet.String())
+		fmt.Printf("Payload %s", string(packet.Data()))
 	}
 }
