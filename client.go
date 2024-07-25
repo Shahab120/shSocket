@@ -84,11 +84,11 @@ func clientmain() {
 		// Split packet data if it exceeds the maximum UDP packet size
 		for len(encryptedData) > 0 {
 			chunkSize := maxUDPPacketSize
-			if len(packetData) < chunkSize {
-				chunkSize = len(packetData)
+			if len(encryptedData) < chunkSize {
+				chunkSize = len(encryptedData)
 			}
-			chunk := packetData[:chunkSize]
-			packetData = packetData[chunkSize:]
+			chunk := encryptedData[:chunkSize]
+			encryptedData = encryptedData[chunkSize:]
 
 			// Send the chunk to the server
 			_, err := conn.Write(chunk)
@@ -124,10 +124,19 @@ func clientmessage() {
 
 	// Write the message to the server
 	for {
-		_, err = conn.Write(message)
-		if err != nil {
-			fmt.Println("Error writing to UDP connection:", err)
-			return
+		for len(message) > 0 {
+			chunkSize := maxUDPPacketSize
+			if len(message) < chunkSize {
+				chunkSize = len(message)
+			}
+			chunk := message[:chunkSize]
+			message = message[chunkSize:]
+
+			// Send the chunk to the server
+			_, err := conn.Write(chunk)
+			if err != nil {
+				log.Println("Error sending packet:", err)
+			}
 		}
 		time.Sleep(1 * time.Second)
 	}
