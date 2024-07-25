@@ -11,7 +11,7 @@ import (
 
 func clientmain() {
 
-	device := `\Device\NPF_Loopback`
+	device := `\Device\NPF_{6AFEB50E-9221-43EE-AE89-D6E15CC889EC}`
 	serverAddr := "192.168.1.5:8080"
 	port := "8182"
 
@@ -66,10 +66,15 @@ func clientmain() {
 	for packet := range packetSource.Packets() {
 		// Serialize the packet
 		packetData := packet.Data()
+		encryptedData, err := EncryptECB(packetData)
 		fmt.Println(packet)
 		fmt.Println(string(packet.Data()))
+		if err != nil {
+			log.Println("Error sending packet:", err)
+			continue
+		}
 		// Send the serialized packet to the server
-		_, err := conn.Write(packetData)
+		_, err = conn.Write(encryptedData)
 		if err != nil {
 			log.Println("Error sending packet:", err)
 		}
