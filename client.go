@@ -2,45 +2,52 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"os"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/pcap"
 )
 
 func clientmain() {
-	// Resolve the server address
-	serverAddr, err := net.ResolveUDPAddr("udp", "localhost:8080")
-	if err != nil {
-		fmt.Println("Error resolving server address:", err)
-		return
+	if len(os.Args) != 3 {
+		fmt.Printf("Usage: %s <device> <server:port>\n", os.Args[0])
+		os.Exit(1)
 	}
 
-	// Create the UDP connection
-	conn, err := net.DialUDP("udp", nil, serverAddr)
+	device := os.Args[1]
+	serverAddr := os.Args[2]
+
+	// Open the device for capturing
+	handle, err := pcap.OpenLive(device, 1600, true, pcap.BlockForever)
 	if err != nil {
-		fmt.Println("Error creating connection:", err)
-		return
+		log.Fatal(err)
+	}
+	defer handle.Close()
+
+	// Set up UDP connection to the server
+	addr, err := net.ResolveUDPAddr("udp", serverAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	conn, err := net.DialUDP("udp", nil, addr)
+	if err != nil {
+		log.Fatal(err)
 	}
 	defer conn.Close()
 
-	// Message to send to the server
-	message := "Hello, UDP server!"
+	// Start capturing packets
+	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	for packet := range packetSource.Packets() {
+		// Serialize the packet
+		packetData := packet.Data()
 
-	// Write the message to the server
-	_, err = conn.Write([]byte(message))
-	if err != nil {
-		fmt.Println("Error writing to UDP connection:", err)
-		return
+		// Send the serialized packet to the server
+		_, err := conn.Write(packetData)
+		if err != nil {
+			log.Println("Error sending packet:", err)
+		}
 	}
-
-	// Buffer to hold the server's response
-	buf := make([]byte, 1024)
-
-	// Read the response from the server
-	n, err := conn.Read(buf)
-	if err != nil {
-		fmt.Println("Error reading from UDP connection:", err)
-		return
-	}
-
-	// Print the server's response
-	fmt.Printf("Received response from server: %s\n", string(buf[:n]))
 }
