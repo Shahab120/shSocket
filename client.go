@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 
 	"github.com/google/gopacket"
@@ -99,16 +100,20 @@ func clientmessage() {
 	defer conn.Close()
 
 	// Message to send to the server
-	message := "Hello, UDP mserver!"
+	message, err := os.ReadFile("F:/shSocket/base64.txt")
+	if err != nil {
+		fmt.Println("Error creating connection:", err)
+		return
+	}
 
 	// Write the message to the server
 	for {
-		_, err = conn.Write([]byte(message))
+		_, err = conn.Write(message)
 		if err != nil {
 			fmt.Println("Error writing to UDP connection:", err)
 			return
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 
 }
