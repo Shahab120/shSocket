@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
@@ -76,11 +78,11 @@ func clientmain() {
 		// Split packet data if it exceeds the maximum UDP packet size
 		for len(packetData) > 0 {
 			chunkSize := maxUDPPacketSize
-			if len(packetData) < chunkSize {
-				chunkSize = len(packetData)
+			if len(encryptedData) < chunkSize {
+				chunkSize = len(encryptedData)
 			}
-			chunk := packetData[:chunkSize]
-			packetData = packetData[chunkSize:]
+			chunk := encryptedData[:chunkSize]
+			encryptedData = encryptedData[chunkSize:]
 
 			encryptedData, err := EncryptECB(chunk)
 			if err != nil {
@@ -101,7 +103,7 @@ func clientmain() {
 }
 
 func clientmessage() {
-	serverAddr, err := net.ResolveUDPAddr("udp", "localhost:8182")
+	serverAddr, err := net.ResolveUDPAddr("udp", "192.168.1.8:8182")
 	if err != nil {
 		fmt.Println("Error resolving server address:", err)
 		return
@@ -116,13 +118,29 @@ func clientmessage() {
 	defer conn.Close()
 
 	// Message to send to the server
-	message := "Hello, UDP mserver!"
+	message, err := os.ReadFile("F:/shSocket/base64.txt")
+	if err != nil {
+		fmt.Println("Error creating connection:", err)
+		return
+	}
 
 	// Write the message to the server
-	_, err = conn.Write([]byte(message))
-	if err != nil {
-		fmt.Println("Error writing to UDP connection:", err)
-		return
+	for {
+		for len(message) > 0 {
+			chunkSize := maxUDPPacketSize
+			if len(message) < chunkSize {
+				chunkSize = len(message)
+			}
+			chunk := message[:chunkSize]
+			message = message[chunkSize:]
+
+			// Send the chunk to the server
+			_, err := conn.Write(chunk)
+			if err != nil {
+				log.Println("Error sending packet:", err)
+			}
+		}
+		time.Sleep(1 * time.Second)
 	}
 
 }

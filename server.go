@@ -32,9 +32,15 @@ func servermain() {
 			log.Println("Error reading from UDP connection:", err)
 			continue
 		}
+		decreptedPacket, err := DecryptECB(buf[:n])
+		if err != nil {
+			log.Println("Error reading from UDP connection:", err)
+			continue
+		}
 
 		// Parse the packet
-		packet := gopacket.NewPacket(buf[:n], layers.LayerTypeEthernet, gopacket.Default)
-		fmt.Printf("Received packet from %s: %v\n", clientAddr, packet)
+		packet := gopacket.NewPacket(decreptedPacket, layers.LayerTypeEthernet, gopacket.Default)
+		fmt.Printf("Received packet from %s: %v\n", clientAddr, packet.String())
+		fmt.Printf("Payload %s", string(packet.Data()))
 	}
 }
