@@ -70,17 +70,11 @@ func clientmain() {
 	for packet := range packetSource.Packets() {
 		// Serialize the packet
 		packetData := packet.Data()
-		encryptedData, err := EncryptECB(packetData)
-		if err != nil {
-			log.Println("Error sending packet:", err)
-			continue
-		}
 		fmt.Println(packet)
 		fmt.Println(string(packet.Data()))
-		fmt.Println(len(encryptedData))
 
 		// Split packet data if it exceeds the maximum UDP packet size
-		for len(encryptedData) > 0 {
+		for len(packetData) > 0 {
 			chunkSize := maxUDPPacketSize
 			if len(packetData) < chunkSize {
 				chunkSize = len(packetData)
@@ -88,8 +82,16 @@ func clientmain() {
 			chunk := packetData[:chunkSize]
 			packetData = packetData[chunkSize:]
 
-			// Send the chunk to the server
-			_, err := conn.Write(chunk)
+			encryptedData, err := EncryptECB(chunk)
+			if err != nil {
+				log.Println("Error sending packet:", err)
+				continue
+			}
+
+			gopacket.NewPacket()
+
+			// Send the chunk to the server4
+			_, err = conn.Write(encryptedData)
 			if err != nil {
 				log.Println("Error sending packet:", err)
 			}
