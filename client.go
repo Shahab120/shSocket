@@ -18,8 +18,6 @@ const (
 func clientmain() {
 
 	device := `\Device\NPF_{6AFEB50E-9221-43EE-AE89-D6E15CC889EC}`
-	serverAddr := "192.168.1.5:8080"
-	port := "8182"
 
 	// Check if the device exists
 	devices, err := pcap.FindAllDevs()
@@ -49,14 +47,14 @@ func clientmain() {
 	defer handle.Close()
 
 	// Set up a BPF filter for the specified port
-	filter := fmt.Sprintf("port %s", port)
+	filter := fmt.Sprintf("port %s", clientListenPort)
 	if err := handle.SetBPFFilter(filter); err != nil {
 		log.Fatal("Error setting BPF filter: ", err)
 	}
-	fmt.Println("Only capturing packets on port", port)
+	fmt.Println("Only capturing packets on port", clientListenPort)
 
 	// Set up UDP connection to the server
-	addr, err := net.ResolveUDPAddr("udp", serverAddr)
+	addr, err := net.ResolveUDPAddr("udp", clientServerAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,29 +73,18 @@ func clientmain() {
 		fmt.Println(packet)
 		fmt.Println(string(packet.Data()))
 
-		// Split packet data if it exceeds the maximum UDP packet size
-		for len(packetData) > 0 {
-			chunkSize := maxUDPPacketSize
-			if len(encryptedData) < chunkSize {
-				chunkSize = len(encryptedData)
-			}
-			chunk := encryptedData[:chunkSize]
-			encryptedData = encryptedData[chunkSize:]
-
-			encryptedData, err := EncryptECB(chunk)
-			if err != nil {
-				log.Println("Error sending packet:", err)
-				continue
-			}
-
-			gopacket.NewPacket()
-
-			// Send the chunk to the server4
-			_, err = conn.Write(encryptedData)
-			if err != nil {
-				log.Println("Error sending packet:", err)
-			}
+		encryptedData, err := EncryptECB(packetData)
+		if err != nil {
+			log.Println("Error sending packet:", err)
+			continue
 		}
+
+		// Send the chunk to the server4
+		_, err = conn.Write(encryptedData)
+		if err != nil {
+			log.Println("Error sending packet:", err)
+		}
+
 	}
 
 }

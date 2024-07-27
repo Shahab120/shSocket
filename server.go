@@ -11,7 +11,7 @@ import (
 
 func servermain() {
 	// Resolve the address to listen on
-	addr, err := net.ResolveUDPAddr("udp", ":8080")
+	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%s", serverListenPort))
 	if err != nil {
 		log.Fatal(err)
 	}
