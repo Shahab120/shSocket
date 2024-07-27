@@ -9,10 +9,11 @@ import (
 )
 
 var (
-	key                 string
-	serverListenPort    string
-	clientServerAddress string
-	clientListenPort    string
+	key                  string
+	serverListenPort     string
+	clientServerAddress  string
+	clientListenPort     string
+	serverForwardAddress string
 )
 
 var rootCmd = &cobra.Command{
@@ -56,12 +57,22 @@ var clientCmd = &cobra.Command{
 func runServer(cmd *cobra.Command, args []string) {
 	fmt.Println("Run Server")
 
+	if len(args) < 2 {
+		fmt.Println("low args")
+		log.Fatal(1)
+	}
+
 	servermain()
 
 }
 
 func runClient(cmd *cobra.Command, args []string) {
 	fmt.Println("Run Client")
+
+	if len(args) < 2 {
+		fmt.Println("low args")
+		log.Fatal(1)
+	}
 
 	clientmain()
 }
