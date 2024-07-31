@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"time"
 
 	"github.com/google/gopacket"
@@ -17,8 +16,8 @@ const (
 
 func clientmain() {
 
-	device := `\Device\NPF_{6AFEB50E-9221-43EE-AE89-D6E15CC889EC}`
-	serverAddr := "192.168.1.5:8080"
+	device := `\Device\NPF_Loopback`
+	serverAddr := "localhost:8080"
 	port := "8182"
 
 	// Check if the device exists
@@ -78,11 +77,11 @@ func clientmain() {
 		// Split packet data if it exceeds the maximum UDP packet size
 		for len(packetData) > 0 {
 			chunkSize := maxUDPPacketSize
-			if len(encryptedData) < chunkSize {
-				chunkSize = len(encryptedData)
+			if len(packetData) < chunkSize {
+				chunkSize = len(packetData)
 			}
-			chunk := encryptedData[:chunkSize]
-			encryptedData = encryptedData[chunkSize:]
+			chunk := packetData[:chunkSize]
+			packetData = packetData[chunkSize:]
 
 			encryptedData, err := EncryptECB(chunk)
 			if err != nil {
@@ -90,7 +89,7 @@ func clientmain() {
 				continue
 			}
 
-			gopacket.NewPacket()
+			// gopacket.NewLayerClass()
 
 			// Send the chunk to the server4
 			_, err = conn.Write(encryptedData)
@@ -118,21 +117,24 @@ func clientmessage() {
 	defer conn.Close()
 
 	// Message to send to the server
-	message, err := os.ReadFile("F:/shSocket/base64.txt")
-	if err != nil {
-		fmt.Println("Error creating connection:", err)
-		return
-	}
+	// message, err := os.ReadFile("F:/shSocket/base64.txt")
+	// if err != nil {
+	// 	fmt.Println("Error creating connection:", err)
+	// 	return
+	// }
+
+	message := []byte("hi there")
 
 	// Write the message to the server
 	for {
-		for len(message) > 0 {
+		chmessage := message
+		for len(chmessage) > 0 {
 			chunkSize := maxUDPPacketSize
-			if len(message) < chunkSize {
-				chunkSize = len(message)
+			if len(chmessage) < chunkSize {
+				chunkSize = len(chmessage)
 			}
-			chunk := message[:chunkSize]
-			message = message[chunkSize:]
+			chunk := chmessage[:chunkSize]
+			chmessage = chmessage[chunkSize:]
 
 			// Send the chunk to the server
 			_, err := conn.Write(chunk)
