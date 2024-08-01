@@ -2,63 +2,69 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
-
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"os"
 )
 
 func servermain() {
-	// Resolve the address to listen on
-	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%s", serverListenPort))
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	// Set up the UDP listener
-	conn, err := net.ListenUDP("udp", addr)
+	// Start listening on port 8080
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", serverListenPort))
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error starting TCP server:", err)
+		os.Exit(1)
 	}
-	defer conn.Close()
+	defer listener.Close()
+	fmt.Printf("Listening on port %s\n", serverListenPort)
 
-	// Resolve the forward address
-	forwardAddr, err := net.ResolveUDPAddr("udp", serverForwardAddress)
+	// Connect to the server on port 8080
+	outconn, err := net.Dial("tcp", serverForwardAddress)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error Connecting to TCP server:", err)
+		os.Exit(1)
 	}
-
-	// Set up the UDP connection to forward packets
-	forwardConn, err := net.DialUDP("udp", nil, forwardAddr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer forwardConn.Close()
-
-	buf := make([]byte, 1600)
+	defer outconn.Close()
+	fmt.Printf("Connect to %s\n", serverForwardAddress)
 
 	for {
-		// Read data from the connection
-		n, _, err := conn.ReadFromUDP(buf)
+		// Accept an incoming connection
+		inconn, err := listener.Accept()
 		if err != nil {
-			log.Println("Error reading from UDP connection:", err)
-			continue
-		}
-		decreptedPacket, err := DecryptECB(buf[:n])
-		if err != nil {
-			log.Println("Error reading from UDP connection:", err)
+			fmt.Println("Error accepting connection:", err)
 			continue
 		}
 
-		// Parse the packet
-		packet := gopacket.NewPacket(decreptedPacket, layers.LayerTypeEthernet, gopacket.Default)
-		fmt.Printf("Received packet from : %v\n", packet.String())
-		fmt.Printf("Payload %s", string(packet.Data()))
-
-		_, err = forwardConn.Write(packet.Data())
-		if err != nil {
-			log.Println("Error forwarding packet:", err)
-		}
+		// Handle the connection in a new goroutine
+		go handleServerConnection(inconn, outconn)
 	}
+
+}
+
+func handleServerConnection(inconn net.Conn, outconn net.Conn) {
+
+	recivedData := make([]byte, 1600)
+
+	// Read data from the connection
+	_, err := inconn.Read(recivedData)
+	if err != nil {
+		fmt.Println("Error reading from connection:", err)
+		return
+	}
+
+	fmt.Println("Recived: ", string(recivedData))
+
+	// Encrypte data
+	decryptedData, err := DecryptECB(recivedData)
+	if err != nil {
+		fmt.Println("Error while decrypting data:", err)
+		return
+	}
+
+	// Send a message to the server
+	_, err = outconn.Write(decryptedData)
+	if err != nil {
+		fmt.Println("Error writing to connection:", err)
+		return
+	}
+
 }

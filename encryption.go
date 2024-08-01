@@ -55,7 +55,10 @@ func PKCS5Padding(src []byte, blockSize int) []byte {
 
 // PKCS5Unpadding removes padding from the plaintext
 func PKCS5Unpadding(src []byte) []byte {
-	length := len(src)
-	unpadding := int(src[length-1])
-	return src[:(length - unpadding)]
+	if len(src) > 0 {
+		length := len(src)
+		unpadding := int(src[length-1])
+		return src[:(length - unpadding)]
+	}
+	return src
 }

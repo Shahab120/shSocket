@@ -2,12 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
-	"time"
-
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/pcap"
+	"os"
 )
 
 const (
@@ -16,131 +12,79 @@ const (
 
 func clientmain() {
 
-	device := `\Device\NPF_{6AFEB50E-9221-43EE-AE89-D6E15CC889EC}`
-
-	// Check if the device exists
-	devices, err := pcap.FindAllDevs()
+	// Start listening on port 8080
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", clientListenPort))
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error starting TCP server:", err)
+		os.Exit(1)
 	}
+	defer listener.Close()
+	fmt.Printf("Listening on port %s\n", clientListenPort)
 
-	// fmt.Println(devices)
-
-	deviceExists := false
-	for _, dev := range devices {
-		if dev.Name == device {
-			deviceExists = true
-			break
-		}
-	}
-
-	if !deviceExists {
-		log.Fatalf("Device %s not found", device)
-	}
-
-	// Open the device for capturing
-	handle, err := pcap.OpenLive(device, 1600, true, pcap.BlockForever)
+	// Connect to the server on port 8080
+	outconn, err := net.Dial("tcp", serverAddress)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error Connecting to TCP server:", err)
+		os.Exit(1)
 	}
-	defer handle.Close()
+	defer outconn.Close()
+	fmt.Printf("Connect to %s\n", serverAddress)
 
-	// Set up a BPF filter for the specified port
-	filter := fmt.Sprintf("port %s", clientListenPort)
-	if err := handle.SetBPFFilter(filter); err != nil {
-		log.Fatal("Error setting BPF filter: ", err)
-	}
-	fmt.Println("Only capturing packets on port", clientListenPort)
-
-	// Set up UDP connection to the server
-	addr, err := net.ResolveUDPAddr("udp", clientServerAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	conn, err := net.DialUDP("udp", nil, addr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
-
-	// Start capturing packets
-	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	for packet := range packetSource.Packets() {
-		// Serialize the packet
-		packetData := packet.Data()
-		fmt.Println(packet)
-		fmt.Println(string(packet.Data()))
-
-		// Split packet data if it exceeds the maximum UDP packet size
-		for len(packetData) > 0 {
-			chunkSize := maxUDPPacketSize
-			if len(encryptedData) < chunkSize {
-				chunkSize = len(encryptedData)
-			}
-			chunk := encryptedData[:chunkSize]
-			encryptedData = encryptedData[chunkSize:]
-
-			encryptedData, err := EncryptECB(chunk)
-			if err != nil {
-				log.Println("Error sending packet:", err)
-				continue
-			}
-
-			gopacket.NewPacket()
-
-		// Send the chunk to the server4
-		_, err = conn.Write(encryptedData)
+	for {
+		// Accept an incoming connection
+		inconn, err := listener.Accept()
 		if err != nil {
-			log.Println("Error sending packet:", err)
+			fmt.Println("Error accepting connection:", err)
+			continue
 		}
 
+		// Handle the connection in a new goroutine
+		go handleClientConnection(inconn, outconn)
+	}
+
+}
+
+func handleClientConnection(inconn net.Conn, outconn net.Conn) {
+
+	recivedData := make([]byte, 1600)
+
+	_, err := inconn.Read(recivedData)
+	if err != nil {
+		fmt.Println("Error reading from connection:", err)
+		return
+	}
+
+	// Encrypte data
+	encryptedData, err := EncryptECB(recivedData)
+	if err != nil {
+		fmt.Println("Error while encrypting data:", err)
+		return
+	}
+
+	// Send a message to the server
+	_, err = outconn.Write(encryptedData)
+	if err != nil {
+		fmt.Println("Error writing to connection:", err)
+		return
 	}
 
 }
 
 func clientmessage() {
-	serverAddr, err := net.ResolveUDPAddr("udp", "192.168.1.8:8182")
+	// Connect to the server on port 8080
+	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
-		fmt.Println("Error resolving server address:", err)
-		return
-	}
-
-	// Create the UDP connection
-	conn, err := net.DialUDP("udp", nil, serverAddr)
-	if err != nil {
-		fmt.Println("Error creating connection:", err)
-		return
+		fmt.Println("Error connecting to server:", err)
+		os.Exit(1)
 	}
 	defer conn.Close()
 
-	// Message to send to the server
-	// message, err := os.ReadFile("F:/shSocket/base64.txt")
-	// if err != nil {
-	// 	fmt.Println("Error creating connection:", err)
-	// 	return
-	// }
+	message := "Hello, Server!\ns"
 
-	message := []byte("hi there")
-
-	// Write the message to the server
-	for {
-		chmessage := message
-		for len(chmessage) > 0 {
-			chunkSize := maxUDPPacketSize
-			if len(chmessage) < chunkSize {
-				chunkSize = len(chmessage)
-			}
-			chunk := chmessage[:chunkSize]
-			chmessage = chmessage[chunkSize:]
-
-			// Send the chunk to the server
-			_, err := conn.Write(chunk)
-			if err != nil {
-				log.Println("Error sending packet:", err)
-			}
-		}
-		time.Sleep(1 * time.Second)
+	// Send a message to the server
+	_, err = conn.Write([]byte(message))
+	if err != nil {
+		fmt.Println("Error writing to connection:", err)
+		return
 	}
-
 }

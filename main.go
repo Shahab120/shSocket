@@ -8,4 +8,6 @@ package main
 
 func main() {
 	Execute()
+	// checkmain()
+	// clientmessage()
 }

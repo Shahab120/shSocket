@@ -1,27 +1,46 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"log"
-
-	"github.com/google/gopacket/pcap"
+	"net"
+	"os"
 )
 
-func check() {
-	// Find all devices
-	devices, err := pcap.FindAllDevs()
+func checkmain() {
+	// Start listening on port 8080
+	listener, err := net.Listen("tcp", ":8183")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error starting TCP server:", err)
+		os.Exit(1)
+	}
+	defer listener.Close()
+	fmt.Println("Listening on port 8183")
+
+	for {
+		// Accept an incoming connection
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection:", err)
+			continue
+		}
+
+		// Handle the connection in a new goroutine
+		go handleConnection(conn)
+	}
+}
+
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	// Read data from the connection
+	reader := bufio.NewReader(conn)
+	message, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Error reading from connection:", err)
+		return
 	}
 
-	// Print device information
-	for _, device := range devices {
-		fmt.Printf("Name: %s\n", device.Name)
-		fmt.Printf("Description: %s\n", device.Description)
-		for _, address := range device.Addresses {
-			fmt.Printf("IP address: %s\n", address.IP)
-			fmt.Printf("Subnet mask: %s\n", address.Netmask)
-		}
-		fmt.Println()
-	}
+	fmt.Printf("Received: %s", message)
+
 }
