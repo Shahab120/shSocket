@@ -11,7 +11,7 @@ import (
 
 func servermain() {
 	// Resolve the address to listen on
-	addr, err := net.ResolveUDPAddr("udp", ":8080")
+	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%s", serverListenPort))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -23,11 +23,24 @@ func servermain() {
 	}
 	defer conn.Close()
 
+	// Resolve the forward address
+	forwardAddr, err := net.ResolveUDPAddr("udp", serverForwardAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Set up the UDP connection to forward packets
+	forwardConn, err := net.DialUDP("udp", nil, forwardAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer forwardConn.Close()
+
 	buf := make([]byte, 1600)
 
 	for {
 		// Read data from the connection
-		n, clientAddr, err := conn.ReadFromUDP(buf)
+		n, _, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			log.Println("Error reading from UDP connection:", err)
 			continue
@@ -40,7 +53,12 @@ func servermain() {
 
 		// Parse the packet
 		packet := gopacket.NewPacket(decreptedPacket, layers.LayerTypeEthernet, gopacket.Default)
-		fmt.Printf("Received packet from %s: %v\n", clientAddr, packet.String())
+		fmt.Printf("Received packet from : %v\n", packet.String())
 		fmt.Printf("Payload %s", string(packet.Data()))
+
+		_, err = forwardConn.Write(packet.Data())
+		if err != nil {
+			log.Println("Error forwarding packet:", err)
+		}
 	}
 }

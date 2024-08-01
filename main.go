@@ -1,8 +1,11 @@
 package main
 
+// func main() {
+// 	clientmain()
+// 	// clientmessage()
+// 	// check()
+// }
+
 func main() {
-	// servermain()
-	// clientmain()
-	// clientmessage()
-	// check()
+	Execute()
 }

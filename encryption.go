@@ -6,11 +6,9 @@ import (
 	"fmt"
 )
 
-var key = []byte("examplekey123456")
-
 // EncryptECB encrypts data using AES-128 in ECB mode
 func EncryptECB(plaintext []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
+	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return []byte{}, err
 	}
@@ -29,7 +27,7 @@ func EncryptECB(plaintext []byte) ([]byte, error) {
 
 // DecryptECB decrypts data using AES-128 in ECB mode
 func DecryptECB(cipher []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
+	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return nil, err
 	}
